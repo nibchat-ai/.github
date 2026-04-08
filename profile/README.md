@@ -1,5 +1,5 @@
 <p>
-  <img src="nibchat_logo_full.svg" alt="" width="288" align="middle" />
+  <img src="../nibchat_logo_full.svg" alt="" width="288" align="middle" />
 </p>
 
 **Turn any MCP Server into a ready-to-go AI Agent — in minutes.**
