@@ -30,8 +30,6 @@ Here are some examples of Nibchat in action:
 
 ## Features
 
-- **PostgreSQL support** — swap SQLite for PostgreSQL by setting a single env var (`POSTGRESQL_DSN`); includes native vector search via `pgvector` for the knowledge base, with an automatic in-memory cosine-similarity fallback if the extension is not installed
-- **Flexible file storage** — uploaded files can be stored in the database (default, zero config), on the local filesystem (`FILE_STORAGE_PATH`), or in any S3-compatible bucket (`S3_BUCKET`) — AWS S3, Cloudflare R2, MinIO, Tigris
 - **Optional user authentication** — enable email/password login with `AUTH_ENABLED=true`; supports open registration or invite-only mode (`INVITE_ONLY=true`); conversations are scoped to the logged-in user and accessible from any device
 - **Knowledge base (RAG)** — drop `.txt`, `.md`, or `.pdf` files into a `knowledge/` folder; Nibchat indexes them at startup using OpenAI embeddings and gives the agent a built-in `search_knowledge` tool for semantic retrieval — no extra infrastructure, everything stored in the same SQLite database
 - **MCP-UI / MCP Apps rendering** — tool results that return interactive HTML UIs are rendered inline in the chat as sandboxed iframes; iframes can call tools back interactively via a built-in postMessage relay; UIs persist across conversation reloads
@@ -509,68 +507,8 @@ Admin passwords must be at least 8 characters and contain uppercase, lowercase, 
 | `TAVILY_API_KEY` | — | Enables the built-in `web_search` tool (get a free key at [tavily.com](https://tavily.com)) |
 | `JINA_API_KEY` | — | Optional — increases quota for the built-in `fetch_page` tool |
 | `WEB_FETCH_MAX_TOKENS` | `2000` | Max tokens returned by `fetch_page` (1 token ≈ 4 chars) |
-| `POSTGRESQL_DSN` | — | PostgreSQL connection string — when set, PostgreSQL is used instead of SQLite (e.g. `postgres://user:pass@host:5432/db`) |
 | `AUTH_ENABLED` | `false` | Set to `true` to require email/password login before accessing the chat |
 | `INVITE_ONLY` | `false` | Set to `true` to disable open registration — admin must create user accounts |
-| `FILE_STORAGE_PATH` | — | Absolute path to a local directory for file storage; if unset, files are stored in the database |
-| `S3_BUCKET` | — | Bucket name — enables S3-compatible file storage (takes precedence over `FILE_STORAGE_PATH`) |
-| `S3_ENDPOINT` | — | Custom S3 endpoint for R2/MinIO/Tigris; omit for AWS |
-| `S3_REGION` | `auto` | S3 region |
-| `S3_ACCESS_KEY_ID` | — | S3 access key |
-| `S3_SECRET_ACCESS_KEY` | — | S3 secret key |
-| `S3_PRESIGN_TTL` | `3600` | Presigned URL TTL in seconds |
-
----
-
-## PostgreSQL
-
-By default Nibchat uses SQLite. To use PostgreSQL instead, set `POSTGRESQL_DSN`:
-
-```yaml
-environment:
-  - POSTGRESQL_DSN=postgres://user:password@db:5432/nibchat
-```
-
-Nibchat auto-creates all tables on startup. The knowledge base uses a `vector(1536)` column with an HNSW index when the `pgvector` extension is available; if it is not installed, Nibchat falls back to in-memory cosine similarity transparently.
-
-A ready-made PostgreSQL service is included (commented out) in the project's `docker-compose.yml` as a starting point.
-
----
-
-## File Storage
-
-By default uploaded files are stored as base64 BLOBs inside the database. Two external storage backends are available.
-
-### Local filesystem
-
-```yaml
-environment:
-  - FILE_STORAGE_PATH=/app/uploads
-volumes:
-  - nibchat-uploads:/app/uploads
-```
-
-Files are written to that directory as raw binary; data URLs are reconstructed on the fly when they are read back.
-
-### S3-compatible object storage
-
-Works with AWS S3, Cloudflare R2, MinIO, Tigris, and any other S3-compatible service.
-
-```yaml
-environment:
-  - S3_BUCKET=my-nibchat-files
-  - S3_REGION=auto                          # or us-east-1, etc.
-  - S3_ENDPOINT=https://...r2.cloudflarestorage.com   # omit for AWS
-  - S3_ACCESS_KEY_ID=...
-  - S3_SECRET_ACCESS_KEY=...
-  - S3_PRESIGN_TTL=3600                     # presigned URL TTL in seconds (default 3600)
-```
-
-Files are served via short-lived presigned URLs — no public bucket access required.
-
-**Priority**: if both `S3_BUCKET` and `FILE_STORAGE_PATH` are set, S3 wins.
-
-**Cleanup**: when a conversation, session, or user is deleted via the UI or admin panel, their associated files are automatically removed from whichever storage backend is in use.
 
 ---
 
@@ -608,30 +546,6 @@ Passwords must be at least 8 characters and contain uppercase, lowercase, a numb
 
 ---
 
-## Building from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/nibchat-ai/nibchat.git
-cd nibchat
-
-# Install dependencies
-npm install
-
-# Start in development mode (hot reload on both client and server)
-npm run dev
-```
-
-The client runs on `http://localhost:5173` and the server on `http://localhost:3000`.
-
-To build the production image locally:
-
-```bash
-docker build -t nibchat .
-```
-
----
-
 ## Architecture
 
 ```
@@ -655,7 +569,7 @@ docker build -t nibchat .
 
 - **Frontend** — React 18, Vite, Tailwind CSS (dark / light mode)
 - **Backend** — Node.js, Express, TypeScript (ESM)
-- **Database** — SQLite (default) or PostgreSQL via Drizzle ORM (auto-migrated at startup); embeddings stored as BLOBs (SQLite) or `vector(1536)` with HNSW index (pgvector)
+- **Database** — SQLite via Drizzle ORM (auto-migrated at startup); embeddings stored as BLOBs
 - **LLM** — OpenAI API (user-supplied key, any model)
 - **Protocol** — Model Context Protocol SDK (HTTP/Streamable transport)
 - **Embeddings** — `text-embedding-3-small` via OpenAI API; cosine similarity search in-memory at query time
