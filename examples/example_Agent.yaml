@@ -1,0 +1,29 @@
+agent:
+  name: Acme Agent
+  description: |
+    You are a customer support agent for Acme Corp.
+
+  icon: |
+    data:image/svg+xml;base64,PHN2ZyB3aWR0...
+    
+  instructions: |
+    - Always greet the user warmly.
+    - For billing issues, ask for their account email and escalate to billing@acme.com.
+    - For technical issues, try to resolve them using the knowledge base tool.
+    - Never share internal pricing structures.
+    - If unsure, say so and offer to connect the user with a human agent.
+
+  starterMessages:
+    - "I need help with my account"
+    - "I have a billing question"
+    - "Something isn't working"
+    - "I'd like to cancel my subscription"
+
+  mcpServers:
+    - url: https://localhost:3001/mcp
+      name: files
+      headers:
+        Authorization: "Bearer local-dev-token"
+
+    - url: https://docs.internal/mcp
+      name: docs
